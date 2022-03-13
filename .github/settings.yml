@@ -1,0 +1,5 @@
+repository:
+  name: "cloudflare-dyndns"
+  description: "Cloudflare DynDNS Tool"
+  homepage: "https://rwxd.github.io/cloudflare-dyndns/"
+  topics: "cloudflare,dyndns"
