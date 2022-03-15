@@ -1,5 +1,5 @@
 repository:
   name: "cloudflare-dyndns"
-  description: "Cloudflare DynDNS Tool"
+  description: "Cloudflare DynDNS Tool to update DNS entries with new public IPs."
   homepage: "https://rwxd.github.io/cloudflare-dyndns/"
   topics: "cloudflare,dyndns"
