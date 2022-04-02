@@ -2,9 +2,14 @@
 
 ## Description
 
-Update Cloudflare DNS Entries with external IPv4 & IPv6 address.
+cloudflare-dyndns is a CLI application written in Go and delivered as a single executable that lets you run your own dynamic DNS service with Cloudflare.
 
-[How to create a Cloudflare API Token](https://developers.cloudflare.com/api/tokens/create/)
+An api token is needed to run the tool -> [how to create a cloudflare api token](https://developers.cloudflare.com/api/tokens/create/)
+
+## Todos
+
+- Docker Image
+
 
 ## Usage
 
