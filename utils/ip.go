@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -31,14 +32,14 @@ func (c *IPChecker) request(req *http.Request) (*http.Response, error) {
 }
 
 func (c *IPChecker) GetPublicIPv4Address() (address string, err error) {
-	return c.getIPAddress(4)
+	return c.GetIPAddress(4)
 }
 
 func (c *IPChecker) GetPublicIPv6Address() (address string, err error) {
-	return c.getIPAddress(6)
+	return c.GetIPAddress(6)
 }
 
-func (c *IPChecker) getIPAddress(version int) (address string, err error) {
+func (c *IPChecker) GetIPAddress(version int) (address string, err error) {
 	url := fmt.Sprintf("https://ipv%v.ipleak.net/json/", version)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -76,4 +77,13 @@ func NewIPChecker() (ipChecker *IPChecker, err error) {
 			Timeout: 3 * time.Second},
 	}
 	return
+}
+
+func GetDNSTypeForIPVersion(version int) (dnsType string, err error) {
+	if version == 4 {
+		return "A", nil
+	} else if version == 6 {
+		return "AAAA", nil
+	}
+	return "", errors.New("wtf is this ip version")
 }

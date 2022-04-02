@@ -14,36 +14,19 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update DynDNS Entry",
 	Run: func(cmd *cobra.Command, args []string) {
-		domain := cmd.Flag("domain").Value.String()
+		record := cmd.Flag("record").Value.String()
 		zone := cmd.Flag("zone").Value.String()
 		apiToken := cmd.Flag("api-token").Value.String()
+		recordTTL, _ := cmd.Flags().GetInt("ttl")
+		logLevel, err := utils.GetLogrusLogLevelFromString(cmd.Flag("log-level").Value.String())
+		if err != nil {
+			logrus.Fatal(err)
+			os.Exit(1)
+		}
+		logrus.SetLevel(logLevel)
 
-		domain = utils.RemoveZoneFromDomainName(domain, zone)
-
+		domain := utils.CombineRecordAndZone(record, zone)
 		logrus.Infof("Update DynDNS Entry for %s", domain)
-		ipClient, err := utils.NewIPChecker()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		ipv4, err := ipClient.GetPublicIPv4Address()
-		if err != nil {
-			logrus.Warn(err)
-			os.Exit(1)
-		}
-		logrus.Infof("IPv4: %s\n", ipv4)
-
-		ipv6, err := ipClient.GetPublicIPv6Address()
-		if err != nil {
-			logrus.Warn(err)
-		}
-		logrus.Infof("IPv6: %s\n", ipv6)
-
-		if ipv4 == "" && ipv6 == "" {
-			logrus.Error("No public IP address found")
-			os.Exit(1)
-		}
 
 		cf := cloudflare.NewCloudFlareClient(apiToken)
 
@@ -52,23 +35,95 @@ var updateCmd = &cobra.Command{
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		if !tokenTest.Sucess {
+		if !tokenTest.Success {
 			logrus.Error("Invalid API key")
+			logrus.Infof("CloudFlare token verification: %+v", tokenTest)
 			logrus.Error(tokenTest.Errors)
 			os.Exit(1)
 		}
+
+		logrus.Debug("API key verification was successful")
 
 		cfZone, err := cf.GetZone(zone)
 		if err != nil {
 			logrus.Error(err)
 			os.Exit(1)
 		}
-		logrus.Info("Zone: ", cfZone)
+
+		ipClient, err := utils.NewIPChecker()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		for _, ipVersion := range []int{4, 6} {
+			ip, err := ipClient.GetIPAddress(ipVersion)
+			if err != nil {
+				logrus.Error(err)
+				continue
+			}
+
+			if ip == "" {
+				logrus.Errorf("No IPv%v found", ipVersion)
+				continue
+			}
+
+			dnsType, err := utils.GetDNSTypeForIPVersion(ipVersion)
+			if err != nil {
+				logrus.Error(err)
+				continue
+			}
+
+			record := &cloudflare.CloudFlareDNSRecordBody{
+				Name:    domain,
+				Type:    dnsType,
+				Content: ip,
+				Ttl:     recordTTL,
+			}
+
+			recordExists, err := cf.CheckDNSRecordAlreadyExists(cfZone.ID, dnsType, domain)
+			if err != nil {
+				continue
+			}
+
+			if recordExists {
+				logrus.Printf("%s Record already exists\n", dnsType)
+				cfRecord, err := cf.GetDNSRecord(cfZone.ID, dnsType, domain)
+				if err != nil {
+					logrus.Error(err)
+					os.Exit(1)
+				}
+
+				if cfRecord.Content != record.Content || cfRecord.TTL != record.Ttl {
+					fmt.Printf("Updating %s Record with content \"%s\" & ttl %v\n", dnsType, ip, recordTTL)
+					err = cf.UpdateDNSRecord(cfZone.ID, cfRecord.ID, record)
+					if err != nil {
+						logrus.Error(err)
+						os.Exit(1)
+					}
+				} else {
+					fmt.Printf("No update needed for %s Record\n", dnsType)
+				}
+
+			} else {
+				fmt.Printf("Creating %s Record with content \"%s\" & ttl %v\n", dnsType, ip, recordTTL)
+				err = cf.CreateDNSRecord(cfZone.ID, record)
+				if err != nil {
+					logrus.Error(err)
+					os.Exit(1)
+				}
+
+			}
+
+		}
+
 	},
 }
 
 func init() {
-	updateCmd.Flags().StringP("domain", "d", "", "Domain Name")
+	updateCmd.Flags().StringP("record", "r", "", "Domain Name")
 	updateCmd.Flags().StringP("zone", "z", "", "Zone Name")
 	updateCmd.Flags().StringP("api-token", "t", "", "CloudFlare API Token")
+	updateCmd.Flags().Int("ttl", 1, "TTL for records")
+	updateCmd.Flags().String("log-level", "warning", "Log level")
 }
