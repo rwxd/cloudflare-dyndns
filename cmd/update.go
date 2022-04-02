@@ -121,9 +121,9 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	updateCmd.Flags().StringP("record", "r", "", "Domain Name")
-	updateCmd.Flags().StringP("zone", "z", "", "Zone Name")
-	updateCmd.Flags().StringP("api-token", "t", "", "CloudFlare API Token")
-	updateCmd.Flags().Int("ttl", 1, "TTL for records")
-	updateCmd.Flags().String("log-level", "warning", "Log level")
+	updateCmd.Flags().StringP("record", "r", "", "dns record to change")
+	updateCmd.Flags().StringP("zone", "z", "", "zone name")
+	updateCmd.Flags().StringP("api-token", "t", "", "cloudflare api token")
+	updateCmd.Flags().Int("ttl", 1, "ttl for record")
+	updateCmd.Flags().String("log-level", "warning", "log level")
 }
