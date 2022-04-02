@@ -26,7 +26,7 @@ No update needed for AAAA Record
 
 ### Help
 
-```bash
+```
 ❯ cloudflare-dyndns update --help
 Update DynDNS Entry
 
